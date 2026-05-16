@@ -1464,16 +1464,16 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
             onKeyDown={e => e.key === "Enter" && doAnalyzeCloud()}
             placeholder={t.input_placeholder}
             className="input-field"
-            style={{ width: "100%", padding: "14px 52px 14px 16px", borderRadius: 12, fontSize: 15 }}
+            style={{ width: "100%", padding: "16px 52px 16px 18px", borderRadius: 12, fontSize: 16 }}
           />
-          <span style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, pointerEvents: "none" }}>/</span>
+          <span style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, pointerEvents: "none" }}>/</span>
         </div>
 
         {/* Work desc toggle */}
         <button onClick={() => setShowDesc(d => !d)} style={{
           background: "none", border: `1px solid ${showDesc ? th.accent : th.border}`, borderRadius: 8,
-          padding: "7px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7,
-          fontFamily: "var(--font-sora)", fontSize: 12, color: showDesc ? th.accent : th.textMuted,
+          padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 7,
+          fontFamily: "var(--font-sora)", fontSize: 13, color: showDesc ? th.accent : th.textMuted,
           marginBottom: showDesc ? 14 : 0, transition: "all 0.15s"
         }}>
           <span style={{ transition: "transform 0.2s", display: "inline-block", transform: showDesc ? "rotate(45deg)" : "none" }}>+</span>
@@ -1485,15 +1485,15 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
             <textarea value={workDesc} onChange={e => setWorkDesc(e.target.value)}
               placeholder={t.input_desc_placeholder}
               className="input-field"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, fontSize: 13, marginBottom: 8 }}
+              style={{ width: "100%", padding: "14px", borderRadius: 12, fontSize: 14, marginBottom: 10 }}
             />
-            <div style={{ fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted, lineHeight: 1.55 }}>{t.input_desc_hint}</div>
+            <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, lineHeight: 1.55 }}>{t.input_desc_hint}</div>
           </div>
         )}
 
         {/* ── Mode Selector ──────────────────────────────────────── */}
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: th.textMuted, letterSpacing: "0.18em", marginBottom: 10 }}>SELECT ANALYSIS MODE</div>
+        <div style={{ marginTop: 18 }}>
+          <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.18em", marginBottom: 10 }}>SELECT ANALYSIS MODE</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }} className="grid-3-modes">
             {[
               {
@@ -1564,24 +1564,24 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
                 >
                   {/* Recommended badge */}
                   {isRecommended && !isDisabledByWebGPU && (
-                    <div style={{ position: "absolute", top: -8, right: 8, fontFamily: "var(--font-jb)", fontSize: 9, background: th.accent, color: "white", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.08em" }}>★ BEST FOR YOU</div>
+                    <div style={{ position: "absolute", top: -8, right: 8, fontFamily: "var(--font-jb)", fontSize: 10, background: th.accent, color: "white", borderRadius: 4, padding: "2px 6px", letterSpacing: "0.08em" }}>★ BEST FOR YOU</div>
                   )}
                   {isDisabledByWebGPU && (
-                    <div style={{ position: "absolute", top: -8, right: 8, fontFamily: "var(--font-jb)", fontSize: 9, background: "#F04B6B", color: "white", borderRadius: 4, padding: "1px 6px" }}>NO WEBGPU</div>
+                    <div style={{ position: "absolute", top: -8, right: 8, fontFamily: "var(--font-jb)", fontSize: 10, background: "#F04B6B", color: "white", borderRadius: 4, padding: "2px 6px" }}>NO WEBGPU</div>
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 18 }}>{mode.icon}</span>
+                    <span style={{ fontSize: 20 }}>{mode.icon}</span>
                     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      {isCached && <span style={{ fontFamily: "var(--font-jb)", fontSize: 9, color: "#30C47E", background: "#30C47E15", border: "1px solid #30C47E30", borderRadius: 4, padding: "2px 5px" }}>✓ CACHED</span>}
-                      <span style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: mode.speedColor, background: `${mode.speedColor}15`, border: `1px solid ${mode.speedColor}30`, borderRadius: 4, padding: "2px 6px" }}>{mode.speed}</span>
+                      {isCached && <span style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: "#30C47E", background: "#30C47E15", border: "1px solid #30C47E30", borderRadius: 4, padding: "2px 6px" }}>✓ CACHED</span>}
+                      <span style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: mode.speedColor, background: `${mode.speedColor}15`, border: `1px solid ${mode.speedColor}30`, borderRadius: 4, padding: "2px 6px" }}>{mode.speed}</span>
                     </div>
                   </div>
-                  <div style={{ fontFamily: "var(--font-pf)", fontSize: 13, fontWeight: 800, color: isDisabledByWebGPU ? th.textMuted : isSelected ? mode.tagColor : th.textPrimary, letterSpacing: "-0.2px" }}>{mode.label}</div>
+                  <div style={{ fontFamily: "var(--font-pf)", fontSize: 14, fontWeight: 800, color: isDisabledByWebGPU ? th.textMuted : isSelected ? mode.tagColor : th.textPrimary, letterSpacing: "-0.2px" }}>{mode.label}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontFamily: "var(--font-jb)", fontSize: 9, color: mode.tagColor, letterSpacing: "0.12em" }}>{mode.tag}</div>
-                    <div style={{ fontFamily: "var(--font-jb)", fontSize: 9, color: th.textMuted }}>{mode.size}</div>
+                    <div style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: mode.tagColor, letterSpacing: "0.12em" }}>{mode.tag}</div>
+                    <div style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: th.textMuted }}>{mode.size}</div>
                   </div>
-                  <div style={{ fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted, lineHeight: 1.5 }}>{mode.desc}</div>
+                  <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, lineHeight: 1.5 }}>{mode.desc}</div>
                 </button>
               );
             })}
@@ -1629,13 +1629,13 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         </button>
 
         {/* Quick picks */}
-        <div style={{ marginTop: 18, borderTop: `1px solid ${th.border}`, paddingTop: 14 }}>
-          <span style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.12em", marginRight: 10 }}>{t.quick_title}</span>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        <div style={{ marginTop: 22, borderTop: `1px solid ${th.border}`, paddingTop: 16 }}>
+          <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.12em", marginRight: 10 }}>{t.quick_title}</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
             {QUICK_PICKS.map(j => (
               <button key={j} onClick={() => doAnalyzeCloud(j)} className="chip-btn" style={{
                 background: th.surface2, border: `1px solid ${th.border}`, borderRadius: 20,
-                padding: "5px 12px", fontSize: 12, color: th.textSecondary, fontFamily: "var(--font-sora)"
+                padding: "6px 14px", fontSize: 13, color: th.textSecondary, fontFamily: "var(--font-sora)"
               }}>{j}</button>
             ))}
           </div>
@@ -1644,13 +1644,13 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
 
       {/* History */}
       {history.length > 0 && !loading && (
-        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.1em" }}>RECENT:</span>
+        <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.1em" }}>RECENT:</span>
           {history.map(h => (
             <button key={h} onClick={() => doAnalyzeCloud(h)} style={{
               background: th.surface, border: `1px solid ${th.border}`, borderRadius: 20,
-              padding: "4px 12px", fontSize: 12, color: th.textMuted, cursor: "pointer", fontFamily: "var(--font-sora)",
-              display: "inline-flex", alignItems: "center", gap: 5
+              padding: "6px 14px", fontSize: 13, color: th.textMuted, cursor: "pointer", fontFamily: "var(--font-sora)",
+              display: "inline-flex", alignItems: "center", gap: 6
             }}><Clock size={11} /> {h}</button>
           ))}
         </div>
@@ -1660,18 +1660,18 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
       {localProgress && (localProgress.status === "progress" || localProgress.status === "downloading" || localProgress.status === "initiate" || localProgress.status === "ready") && (
         <div style={{ background: th.surface2, borderRadius: 12, padding: "16px", marginBottom: 20, border: `1px solid ${th.border}` }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start" }}>
-            <span style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary }}>
+            <span style={{ fontFamily: "var(--font-sora)", fontSize: 14, color: th.textSecondary }}>
               Downloading {localModelVersion === "e2b" ? "Gemma 4 E2B" : "Gemma 4 E4B"} weights...
-              <div style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: th.textMuted, marginTop: 4, letterSpacing: "-0.3px", wordBreak: "break-all" }}>
+              <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, marginTop: 4, letterSpacing: "-0.3px", wordBreak: "break-all" }}>
                 {localProgress.file ? `Fetching: ${localProgress.file}` : "Initializing pipeline..."}
               </div>
             </span>
-            <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.accent }}>{Math.round(localProgress.progress || 0)}%</span>
+            <span style={{ fontFamily: "var(--font-jb)", fontSize: 13, color: th.accent }}>{Math.round(localProgress.progress || 0)}%</span>
           </div>
           <div style={{ height: 6, background: th.surface3, borderRadius: 3, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${localProgress.progress || 0}%`, background: th.accent, transition: "width 0.2s" }} />
           </div>
-          <div style={{ marginTop: 12, fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted }}>~1.5-3GB model. Works offline after first load. Your data stays on your device.</div>
+          <div style={{ marginTop: 12, fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted }}>~1.5-3GB model. Works offline after first load. Your data stays on your device.</div>
         </div>
       )}
 
@@ -1718,7 +1718,7 @@ function LeaderboardPage({ th, t, onPickJob }) {
           {Object.entries(LEVELS).map(([l, lv]) => {
             const c = LB_DATA.filter(d => d.level === l).length;
             return c > 0 ? (
-              <span key={l} style={{ fontFamily: "var(--font-jb)", fontSize: 12, padding: "4px 12px", borderRadius: 6, background: `${lv.color}12`, border: `1px solid ${lv.color}30`, color: lv.color }}>{lv.label}: {c}</span>
+              <span key={l} style={{ fontFamily: "var(--font-jb)", fontSize: 13, padding: "5px 14px", borderRadius: 6, background: `${lv.color}12`, border: `1px solid ${lv.color}30`, color: lv.color }}>{lv.label}: {c}</span>
             ) : null;
           })}
         </div>
@@ -1730,7 +1730,7 @@ function LeaderboardPage({ th, t, onPickJob }) {
                 padding: "7px 14px", borderRadius: 6, border: "none", cursor: "pointer",
                 background: sort === v ? th.surface2 : "transparent",
                 color: sort === v ? th.textPrimary : th.textMuted,
-                fontFamily: "var(--font-sora)", fontSize: 13,
+                fontFamily: "var(--font-sora)", fontSize: 14,
                 boxShadow: sort === v ? "0 1px 6px rgba(0,0,0,0.1)" : undefined
               }}>{l}</button>
             ))}
@@ -1738,9 +1738,9 @@ function LeaderboardPage({ th, t, onPickJob }) {
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {cats.slice(0, 7).map(c => (
               <button key={c} onClick={() => setCatF(c)} className="chip-btn" style={{
-                padding: "6px 14px", borderRadius: 20, border: `1px solid ${catF === c ? th.accent : th.border}`,
+                padding: "6px 16px", borderRadius: 20, border: `1px solid ${catF === c ? th.accent : th.border}`,
                 background: catF === c ? `${th.accent}14` : th.surface,
-                color: catF === c ? th.accent : th.textMuted, fontSize: 12, fontFamily: "var(--font-sora)"
+                color: catF === c ? th.accent : th.textMuted, fontSize: 13, fontFamily: "var(--font-sora)"
               }}>{c === "All" ? t.lb_all : c}</button>
             ))}
           </div>
@@ -1750,7 +1750,7 @@ function LeaderboardPage({ th, t, onPickJob }) {
       {/* Column headers */}
       <div className="lb-grid" style={{ display: "grid", gridTemplateColumns: "48px 36px 1fr 70px 80px 66px 100px", gap: 10, padding: "8px 16px", marginBottom: 4 }}>
         {[t.lb_rank, "", t.lb_job_title, t.lb_score.toUpperCase(), t.lb_coverage.toUpperCase(), t.lb_bls.toUpperCase(), t.lb_risk_level].map((h, i) => (
-          <div key={i} className={i >= 4 ? "lb-hide" : ""} style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.1em" }}>{h}</div>
+          <div key={i} className={i >= 4 ? "lb-hide" : ""} style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.1em" }}>{h}</div>
         ))}
       </div>
 
@@ -1769,23 +1769,23 @@ function LeaderboardPage({ th, t, onPickJob }) {
             onMouseLeave={e => { e.currentTarget.style.background = th.surface; e.currentTarget.style.borderColor = th.border; }}>
             <div style={{ textAlign: "center" }}>
               {medal ? <span style={{ fontSize: 18 }}>{medal}</span>
-                : <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted }}>#{item.rank}</span>}
+                : <span style={{ fontFamily: "var(--font-jb)", fontSize: 13, color: th.textMuted }}>#{item.rank}</span>}
             </div>
             <div style={{ fontSize: 20, textAlign: "center" }}>{item.icon}</div>
             <div>
-              <div style={{ fontFamily: "var(--font-pf)", fontSize: 13, fontWeight: 700, color: th.textPrimary, marginBottom: 5 }}>{item.title}</div>
+              <div style={{ fontFamily: "var(--font-pf)", fontSize: 14, fontWeight: 700, color: th.textPrimary, marginBottom: 5 }}>{item.title}</div>
               <ScoreBar score={item.score} level={item.level} triggered={triggered} delay={idx * 20} th={th} />
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-pf)", fontSize: 22, fontWeight: 900, color: lv.color, lineHeight: 1 }}>{item.score}</div>
-              <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, marginTop: 2 }}>{t.lb_score_label}</div>
+              <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, marginTop: 2 }}>{t.lb_score_label}</div>
             </div>
-            <div className="lb-hide" style={{ textAlign: "center", fontFamily: "var(--font-jb)", fontSize: 12, color: th.textSecondary }}>{item.coverage}</div>
+            <div className="lb-hide" style={{ textAlign: "center", fontFamily: "var(--font-jb)", fontSize: 13, color: th.textSecondary }}>{item.coverage}</div>
             <div className="lb-hide" style={{ textAlign: "center" }}>
-              <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, fontWeight: 600, color: gc }}>{item.blsGrowth > 0 ? "+" : ""}{item.blsGrowth}%</div>
+              <div style={{ fontFamily: "var(--font-jb)", fontSize: 13, fontWeight: 600, color: gc }}>{item.blsGrowth > 0 ? "+" : ""}{item.blsGrowth}%</div>
             </div>
             <div style={{ textAlign: "center" }}>
-              <span style={{ fontFamily: "var(--font-jb)", fontSize: 11, letterSpacing: "0.1em", padding: "3px 8px", borderRadius: 4, background: `${lv.color}12`, border: `1px solid ${lv.color}25`, color: lv.color }}>{lv.label}</span>
+              <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, letterSpacing: "0.1em", padding: "4px 10px", borderRadius: 4, background: `${lv.color}12`, border: `1px solid ${lv.color}25`, color: lv.color }}>{lv.label}</span>
             </div>
           </div>
         );
@@ -1815,31 +1815,31 @@ function Footer({ th, t, setPage }) {
             <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg,${th.accent},#cca13a)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}><Zap size={18} /></div>
             <div style={{ fontFamily: "var(--font-pf)", fontWeight: 800, fontSize: 15, color: th.textPrimary }}>{t.footer_brand}</div>
           </div>
-          <p style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textSecondary, lineHeight: 1.7, marginBottom: 14 }}>
+          <p style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary, lineHeight: 1.7, marginBottom: 14 }}>
             {t.footer_desc}
           </p>
-          <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted }}>{t.footer_source}</div>
-          <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, opacity: 0.6, marginTop: 4 }}>{t.footer_data}</div>
+          <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted }}>{t.footer_source}</div>
+          <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, opacity: 0.6, marginTop: 4 }}>{t.footer_data}</div>
         </div>
         {/* Navigation */}
         <div>
-          <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.12em", marginBottom: 14 }}>{t.footer_nav_title}</div>
+          <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.12em", marginBottom: 14 }}>{t.footer_nav_title}</div>
           {[["home", <><Home size={14} style={{ marginBottom: -2 }} /> {t.nav_home}</>], ["analyze", <><Search size={14} style={{ marginBottom: -2 }} /> {t.nav_analyze}</>], ["leaderboard", <><Trophy size={14} style={{ marginBottom: -2 }} /> {t.nav_leaderboard}</>]].map(([p, label]) => (
-            <button key={p} onClick={() => setPage(p)} style={{ display: "block", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary, padding: "4px 0", textAlign: "left", transition: "color 0.15s" }}
+            <button key={p} onClick={() => setPage(p)} style={{ display: "block", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sora)", fontSize: 14, color: th.textSecondary, padding: "5px 0", textAlign: "left", transition: "color 0.15s" }}
               onMouseEnter={e => e.currentTarget.style.color = th.accent}
               onMouseLeave={e => e.currentTarget.style.color = th.textSecondary}>{label}</button>
           ))}
           <div style={{ marginTop: 14 }}>
             <a href="https://www.anthropic.com/research/labor-market-impacts" target="_blank" rel="noopener noreferrer"
-              style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.accent, textDecoration: "none" }}><FileText size={14} style={{ marginBottom: -2 }} /> Anthropic 2026 Research →</a>
+              style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.accent, textDecoration: "none" }}><FileText size={14} style={{ marginBottom: -2 }} /> Anthropic 2026 Research →</a>
           </div>
         </div>
         {/* Job shortcuts */}
         <div>
-          <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.12em", marginBottom: 14 }}>{t.footer_jobs_title}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+          <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.12em", marginBottom: 14 }}>{t.footer_jobs_title}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
             {FOOTER_JOBS.map(([icon, title, slug]) => (
-              <a key={slug} href={`/jobs/${slug}`} style={{ fontFamily: "var(--font-sora)", fontSize: 11, color: th.textSecondary, textDecoration: "none", padding: "3px 0", transition: "color 0.15s" }}
+              <a key={slug} href={`/jobs/${slug}`} style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary, textDecoration: "none", padding: "3px 0", transition: "color 0.15s" }}
                 onMouseEnter={e => e.currentTarget.style.color = th.accent}
                 onMouseLeave={e => e.currentTarget.style.color = th.textSecondary}>{icon} {title}</a>
             ))}
@@ -1847,8 +1847,8 @@ function Footer({ th, t, setPage }) {
         </div>
       </div>
       <div style={{ borderTop: `1px solid ${th.border}`, padding: "16px 24px", maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted }}>{t.footer_copyright}</div>
-        <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted }}>{t.footer_powered}</div>
+        <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted }}>{t.footer_copyright}</div>
+        <div style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted }}>{t.footer_powered}</div>
       </div>
     </footer>
   );
