@@ -1551,11 +1551,16 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     }
 
     setLoading(true); setResult(null); setError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35_000); // Fail fast locally if server hangs
+    
     try {
       const res = await fetch("/api/analyze", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle: title.trim(), workDesc: titleOverride ? "" : workDesc.trim(), lang: lang || "en" }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       const textResponse = await res.text();
       let data;
@@ -1583,7 +1588,16 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
-      setError(e.message);
+      clearTimeout(timeoutId);
+      if (e.name === "AbortError" || e.message.includes("fetch")) {
+        if (!_isRetry) {
+          setError(null);
+          return doAnalyzeCloud(titleOverride ?? title, true, _skipCache);
+        }
+        setError("Network or server timeout. The AI is under heavy load. Please try again.");
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }
