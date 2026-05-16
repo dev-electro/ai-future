@@ -1508,8 +1508,46 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     };
     getUserCountry();
   }, []);
-  const inputRef = useRef();
+  // ── Local model management handlers ──────────────────────────────────────────
+  const handleStopDownload = useCallback(() => {
+    if (worker.current) {
+      worker.current.terminate();
+      worker.current = null;
+    }
+    setLocalProgress(null);
+    setLocalModeLoading(false);
+    setIsLocalReady(false);
+  }, []);
 
+  const handleDeleteModel = useCallback(async () => {
+    if (worker.current) { worker.current.terminate(); worker.current = null; }
+    try {
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        for (const k of keys) {
+          if (k.includes("transformers") || k.includes("huggingface") || k.includes("onnx")) {
+            await caches.delete(k);
+          }
+        }
+      }
+      // Also clear IndexedDB if transformers.js used it
+      if ("indexedDB" in window) {
+        indexedDB.deleteDatabase("transformers-cache");
+      }
+    } catch (e) { console.error("Cache clear failed", e); }
+    setCachedModels({ e2b: false, e4b: false });
+    setIsLocalReady(false);
+    setLocalProgress(null);
+    setLocalModeLoading(false);
+  }, []);
+
+  const handlePreDownload = useCallback((modelId) => {
+    if (!worker.current) return;
+    setLocalProgress({ status: 'initiating', progress: 0 });
+    worker.current.postMessage({ type: "init", modelId });
+  }, []);
+
+  const inputRef = useRef();
 
   // Keyboard shortcut: press '/' to focus
   useEffect(() => {

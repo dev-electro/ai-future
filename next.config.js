@@ -16,10 +16,10 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",   // Next.js needs these
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",   // Next.js needs these; GTM/GA
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://huggingface.co https://cdn-lfs.huggingface.co https://*.huggingface.co https://*.hf.co", // Allow local models downloading & XetHub redirects
+              "connect-src 'self' https://huggingface.co https://cdn-lfs.huggingface.co https://*.huggingface.co https://*.hf.co https://www.google-analytics.com https://region1.google-analytics.com", // Allow local models downloading & XetHub redirects & GA
               "img-src 'self' data:",
               "frame-ancestors 'none'",
             ].join("; "),
