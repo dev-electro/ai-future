@@ -1366,8 +1366,8 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
 
   useEffect(() => {
     if (!worker.current && typeof window !== "undefined") {
-      // Added ?v=2 to bust browser cache so the updated worker (with correct model classes) runs
-      worker.current = new Worker(new URL("../lib/worker.js?v=2", import.meta.url), { type: "module" });
+      // Hard renamed to ai-worker.js to permanently bust Webpack/browser cache
+      worker.current = new Worker(new URL("../lib/ai-worker.js?v=3", import.meta.url), { type: "module" });
 
       // ─ keepalive: ping the worker every 10s so Chrome doesn't suspend
       // it when the tab loses focus (WebGPU gets throttled in background tabs)
