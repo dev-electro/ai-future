@@ -19,7 +19,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",   // Next.js needs these
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://huggingface.co https://cdn-lfs.huggingface.co https://*.huggingface.co", // Allow local models downloading
+              "connect-src 'self' https://huggingface.co https://cdn-lfs.huggingface.co https://*.huggingface.co https://*.hf.co", // Allow local models downloading & XetHub redirects
               "img-src 'self' data:",
               "frame-ancestors 'none'",
             ].join("; "),
