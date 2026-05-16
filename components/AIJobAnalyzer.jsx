@@ -1314,8 +1314,8 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         if (cacheStatus.e2b && !cacheStatus.e4b) recommended = "e2b";
       }
       setRecommendedMode(recommended);
-      // Don't auto-switch if user has already interacted (only set default on first load)
-      setLocalModelVersion(recommended);
+      // ALWAYS default to cloud mode for reliability, let user explicitly choose local
+      setLocalModelVersion("cloud");
     })();
   }, []);
 
@@ -1329,6 +1329,13 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         } else if (type === "init_ready") {
           setIsLocalReady(true);
           setLocalProgress(null);
+          // If we had a pending job waiting for the download, fire it now
+          if (worker.current?.pendingJobTitle) {
+            worker.current.postMessage({ type: "generate", text: `Analyze job: ${worker.current.pendingJobTitle}`, modelId: localModelVersion });
+            worker.current.pendingJobTitle = null; // clear it
+          } else {
+             setLocalModeLoading(false);
+          }
         } else if (type === "complete") {
           try {
             // Because small models might fail to output valid JSON, we simulate the structured output
@@ -1361,13 +1368,12 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     setLocalModeLoading(true); setResult(null); setError(null); setLocalProgress({ status: 'initiating' });
     
     if (!isLocalReady) {
+      // The worker will emit 'init_ready' when the model is downloaded and loaded into WebGPU.
+      // We catch that in the useEffect and then trigger the actual analysis generation.
       worker.current.postMessage({ type: "init", modelId: localModelVersion });
-      // Wait for init_ready handled in useEffect, then it will need another click. 
-      // Actually we should just queue it or fetch from cloud for a smooth demo.
-      // For this challenge, simulate the WebGPU initialization progress if it gets stuck.
-      setTimeout(() => {
-        if (!isLocalReady) doAnalyzeCloud(titleOverride); // graceful fallback
-      }, 8000);
+      
+      // Store the pending title so we can generate once ready
+      worker.current.pendingJobTitle = title;
     } else {
       worker.current.postMessage({ type: "generate", text: `Analyze job: ${title}`, modelId: localModelVersion });
     }
