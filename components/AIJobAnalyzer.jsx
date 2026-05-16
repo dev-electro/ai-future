@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Laptop, Headphones, Keyboard, Phone, PenTool, Receipt, BarChart2, Stethoscope, Scale, FileText, Monitor, Globe, Shield, TrendingUp, Calculator, Building2, Megaphone, Newspaper, Users, Palette, Home, Hospital, School, Landmark, Pill, Brain, ShieldAlert, PawPrint, Bone, ChefHat, Zap, Wrench, Flame, Beer, LifeBuoy, Bike, Wheat, HeartHandshake, AlertTriangle, Eye, Check, Sun, Moon, Trophy, Medal, Award, Search, BookOpen, TrendingDown, Coins, Network, ArrowRightLeft, Rocket, RefreshCw, Key, Radio, Compass, Target, Share2, Clock } from "lucide-react";
+import { Laptop, Headphones, Keyboard, Phone, PenTool, Receipt, BarChart2, Stethoscope, Scale, FileText, Monitor, Globe, Shield, TrendingUp, Calculator, Building2, Megaphone, Newspaper, Users, Palette, Home, Hospital, School, Landmark, Pill, Brain, ShieldAlert, PawPrint, Bone, ChefHat, Zap, Wrench, Flame, Beer, LifeBuoy, Bike, Wheat, HeartHandshake, AlertTriangle, Eye, Check, Sun, Moon, Trophy, Medal, Award, Search, BookOpen, TrendingDown, Coins, Network, ArrowRightLeft, Rocket, RefreshCw, Key, Radio, Compass, Target, Share2, Clock, DownloadCloud } from "lucide-react";
 import { LANG_META, SUPPORTED_LANGS, useT } from "@/lib/i18n";
 import DocSetCTA from "./DocSetCTA";
 
@@ -1298,8 +1298,8 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
             const cache = await caches.open(hfCache);
             const requests = await cache.keys();
             const urls = requests.map(r => r.url);
-            cacheStatus.e2b = urls.some(u => u.includes("gemma-2b"));
-            cacheStatus.e4b = urls.some(u => u.includes("gemma-7b") || u.includes("gemma-4b"));
+            cacheStatus.e2b = urls.some(u => u.includes("gemma-4-E2B-it-ONNX"));
+            cacheStatus.e4b = urls.some(u => u.includes("gemma-4-E4B-it-ONNX"));
           }
         }
       } catch { /* cache API unavailable */ }
@@ -1361,18 +1361,21 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     };
   }, []);
 
+  const doDownloadModel = useCallback(() => {
+    if (isLocalReady || localProgress?.status === 'downloading') return;
+    setLocalProgress({ status: 'initiating', progress: 0 });
+    worker.current.postMessage({ type: "init", modelId: localModelVersion });
+  }, [isLocalReady, localProgress, localModelVersion]);
+
   const doAnalyzeLocal = useCallback(async (titleOverride) => {
     const title = titleOverride || jobTitle;
     if (!title.trim()) return;
     if (titleOverride) setJobTitle(titleOverride);
-    setLocalModeLoading(true); setResult(null); setError(null); setLocalProgress({ status: 'initiating' });
+    setLocalModeLoading(true); setResult(null); setError(null); 
     
     if (!isLocalReady) {
-      // The worker will emit 'init_ready' when the model is downloaded and loaded into WebGPU.
-      // We catch that in the useEffect and then trigger the actual analysis generation.
+      setLocalProgress({ status: 'initiating', progress: 0 });
       worker.current.postMessage({ type: "init", modelId: localModelVersion });
-      
-      // Store the pending title so we can generate once ready
       worker.current.pendingJobTitle = title;
     } else {
       worker.current.postMessage({ type: "generate", text: `Analyze job: ${title}`, modelId: localModelVersion });
@@ -1598,25 +1601,50 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
           </div>
         )}
 
+        {/* Pre-download prompt if local mode selected but not cached */}
+        {localModelVersion !== "cloud" && !cachedModels[localModelVersion] && !isLocalReady && (!localProgress || localProgress.status === "done") && (
+          <div style={{ marginTop: 16, background: "rgba(48,196,126,0.06)", border: "1px solid rgba(48,196,126,0.2)", borderRadius: 12, padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <DownloadCloud size={20} color="#30C47E" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div style={{ fontFamily: "var(--font-pf)", fontSize: 15, fontWeight: 700, color: th.textPrimary, marginBottom: 4 }}>Download Model Weights</div>
+                <div style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary, lineHeight: 1.5 }}>
+                  Gemma 4 Edge models run entirely in your browser using Transformers.js and WebGPU. Download the ~{localModelVersion === "e2b" ? "1.5GB" : "3GB"} model once to use it offline forever.
+                </div>
+              </div>
+            </div>
+            <button onClick={doDownloadModel} className="btn-primary" style={{
+              background: "transparent", border: "1.5px solid #30C47E", borderRadius: 8, padding: "10px",
+              color: "#30C47E", fontFamily: "var(--font-jb)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              transition: "all 0.2s"
+            }} onMouseEnter={e => { e.currentTarget.style.background = "#30C47E"; e.currentTarget.style.color = "white"; }}
+               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#30C47E"; }}>
+              Initiate Download Now
+            </button>
+          </div>
+        )}
+
         {/* ── Run Button ─────────────────────────────────────────── */}
         <button
           onClick={() => localModelVersion === "cloud" ? doAnalyzeCloud() : doAnalyzeLocal()}
-          disabled={loading || localModeLoading || !jobTitle.trim()}
+          disabled={loading || localModeLoading || !jobTitle.trim() || (localProgress && localProgress.status === "downloading")}
           className="btn-primary"
           style={{
-            marginTop: 12, width: "100%", padding: "15px", borderRadius: 12, border: "none",
-            background: loading || localModeLoading || !jobTitle.trim()
+            marginTop: 16, width: "100%", padding: "15px", borderRadius: 12, border: "none",
+            background: loading || localModeLoading || !jobTitle.trim() || (localProgress && localProgress.status === "downloading")
               ? th.surface2
               : localModelVersion === "cloud"
                 ? `linear-gradient(135deg,${th.accent},#cca13a)`
                 : `linear-gradient(135deg,#30C47E,#1a9e64)`,
-            color: loading || localModeLoading || !jobTitle.trim() ? th.textMuted : "white",
+            color: loading || localModeLoading || !jobTitle.trim() || (localProgress && localProgress.status === "downloading") ? th.textMuted : "white",
             fontFamily: "var(--font-pf)", fontWeight: 700, fontSize: 16,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             letterSpacing: "-0.2px",
+            transition: "all 0.2s",
+            boxShadow: localModelVersion === "cloud" && !loading && jobTitle.trim() ? "0 4px 14px rgba(230,123,80,0.3)" : "none"
           }}
         >
-          {(loading || localModeLoading) ? (
+          {(loading || localModeLoading || (localProgress && localProgress.status === "downloading")) ? (
             <>
               <span style={{ width: 17, height: 17, borderRadius: "50%", border: "2px solid white", borderTopColor: "transparent", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
               {localProgress?.status === "downloading" ? `Downloading ${localModelVersion.toUpperCase()} (${Math.round(localProgress.progress || 0)}%)...` : localModelVersion === "cloud" ? t.btn_analyzing : `Running ${localModelVersion.toUpperCase()} Locally...`}
