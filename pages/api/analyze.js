@@ -303,10 +303,6 @@ export default async function handler(req, res) {
   // ── Call LLM Chain ────────────────────────────────────────────────────────
   let parsed;
   try {
-    const controller = new AbortController();
-    // Use 9s timeout to prevent Vercel's 10s Hobby limit from throwing a 504 HTML page
-    const id = setTimeout(() => controller.abort(), 9_000);
-
     let finalSystemPrompt = SYSTEM_PROMPT;
     const country = (req.headers["x-vercel-ip-country"] || req.headers["cf-ipcountry"] || req.headers["x-client-geo-location"] || "US").toUpperCase();
     const isIndian = country === "IN" || country === "IND";
@@ -321,8 +317,11 @@ export default async function handler(req, res) {
       finalSystemPrompt += `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write ALL text values in the JSON response in ${langName}. This includes: job_title, coverage_estimate, score_adjustment_note, key_tasks_at_risk array items, protected_tasks array items, automation_vs_augmentation, bls_growth_outlook, displacement_evidence, young_worker_note, insight, key_protection_factor, comparison_jobs, wage_percentile_context, and ALL fields inside career_action_plan (urgency_reason, all phase focus/milestones/tools, specialization names/why_safe/examples, skill names/why, positioning_move, lateral move titles/bls_growth/why_sustainable/bridge_skill, bold pivot titles/domain/why_transferable/first_step, avoid_these_moves). DO NOT write anything in English if the language is ${langName}. The entire output must be fully in ${langName}.`;
     }
 
-    const result = await fetchWithFallback(finalSystemPrompt, userMessage, controller.signal);
-    clearTimeout(id);
+    // Pass null — each provider in llm.js has its own independent timeout.
+    // A shared outer AbortController was killing the whole chain prematurely.
+    // Each provider in llm.js manages its own 15s independent timeout.
+    // Passing null here intentionally — no outer abort needed.
+    const result = await fetchWithFallback(finalSystemPrompt, userMessage, null);
 
     if (result.error) {
       console.error("[analyze.js] All LLMs failed:", result.error);
@@ -330,7 +329,6 @@ export default async function handler(req, res) {
     }
 
     parsed = result.data;
-    // Do NOT expose provider name or API infrastructure via headers
 
   } catch (err) {
     if (err.name === "TimeoutError" || err.name === "AbortError") {
