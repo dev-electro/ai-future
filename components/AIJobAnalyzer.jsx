@@ -1367,54 +1367,85 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
   useEffect(() => {
     if (!worker.current && typeof window !== "undefined") {
       worker.current = new Worker(new URL("../lib/worker.js", import.meta.url), { type: "module" });
+
+      // ─ keepalive: ping the worker every 10s so Chrome doesn't suspend
+      // it when the tab loses focus (WebGPU gets throttled in background tabs)
+      const keepaliveInterval = setInterval(() => {
+        if (worker.current) worker.current.postMessage({ type: "keepalive" });
+      }, 10_000);
+
+      // ─ visibility change: log a warning if the tab goes to background during inference
+      const onVisChange = () => {
+        if (document.visibilityState === "hidden") {
+          console.warn("[Worker] Tab hidden — WebGPU inference may be throttled by the browser.");
+        }
+      };
+      document.addEventListener("visibilitychange", onVisChange);
+
       worker.current.addEventListener("message", (e) => {
         const { type, data, result: res, error: err } = e.data;
+        if (type === "keepalive") return; // pong — ignore
+
         if (type === "progress") {
-          // Track per-file download state for rich UI
           setLocalProgress(prev => {
-            const pct = data.progress ?? prev?.progress ?? 0;
-            // If total bytes known, compute more accurately
             const progressVal = data.total > 0
               ? Math.round((data.loaded / data.total) * 100)
-              : pct;
-            return {
-              status: data.status,
-              file: data.file || prev?.file || '',
-              progress: progressVal,
-              loaded: data.loaded,
-              total: data.total,
-            };
+              : (data.progress ?? prev?.progress ?? 0);
+            return { status: data.status, file: data.file || prev?.file || '', progress: progressVal, loaded: data.loaded, total: data.total };
           });
         } else if (type === "init_ready") {
           setIsLocalReady(true);
           setLocalProgress({ status: 'ready', progress: 100 });
-          // If we had a pending job waiting for the download, fire it now
           if (worker.current?.pendingJobTitle) {
             const pendingTitle = worker.current.pendingJobTitle;
             worker.current.pendingJobTitle = null;
             worker.current.postMessage({ type: "generate", text: `Analyze job: ${pendingTitle}`, modelId: localModelVersion });
           } else {
-             setLocalModeLoading(false);
+            setLocalModeLoading(false);
           }
         } else if (type === "complete") {
+          // Clear the generation timeout
+          if (worker.current?._genTimeout) { clearTimeout(worker.current._genTimeout); worker.current._genTimeout = null; }
+
+          if (res === "OFF_TOPIC") {
+            setError("🚫 Please enter a real job title for analysis.");
+            setLocalModeLoading(false);
+            return;
+          }
           try {
             const raw = (res || '').replace(/```json\n?/g, '').replace(/```/g, '').trim();
             const parsed = JSON.parse(raw);
-            setResult(parsed);
+            if (parsed.error === "off_topic") {
+              setError("🚫 Please enter a real job title for analysis.");
+            } else {
+              setResult(parsed);
+            }
           } catch (parseErr) {
-            console.error("Local model JSON parse failed, falling back to cloud", parseErr);
-            doAnalyzeCloud();
+            console.error("Local model JSON parse failed", parseErr);
+            setError("Local model output wasn't valid JSON. Try Cloud mode for better reliability.");
           }
           setLocalModeLoading(false);
         } else if (type === "error") {
+          if (worker.current?._genTimeout) { clearTimeout(worker.current._genTimeout); worker.current._genTimeout = null; }
           setError("Local AI error: " + err);
           setLocalModeLoading(false);
           setLocalProgress(prev => prev?.status !== 'ready' ? null : prev);
         }
       });
+
+      worker.current._keepalive = keepaliveInterval;
+      worker.current._onVisChange = onVisChange;
     }
     return () => {
-      if (worker.current) worker.current.terminate();
+      if (worker.current) {
+        clearInterval(worker.current._keepalive);
+        document.removeEventListener("visibilitychange", worker.current._onVisChange);
+        // Don't terminate if actively generating — let it finish
+        if (!worker.current._isGenerating) {
+          worker.current.terminate();
+          worker.current = null;
+        }
+      }
     };
   }, []);
 
@@ -1427,9 +1458,31 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
   const doAnalyzeLocal = useCallback(async (titleOverride) => {
     const title = titleOverride || jobTitle;
     if (!title.trim()) return;
+
+    // Client-side off-topic guard — same spirit as the server-side validator
+    // Prevents wasting 30-90s of local WebGPU compute on clearly non-job inputs
+    const offTopicPatterns = /^(what|how|why|when|where|who|is |are |can |could |should |would |do |does |did |tell me|explain|help me|write|create|generate|make|build|concubin|sex|drug|hack|crack|spam)/i;
+    const tooShort = title.trim().length < 3;
+    if (tooShort || offTopicPatterns.test(title.trim())) {
+      setError("🚫 Please enter a real job title (e.g. \"Software Engineer\", \"Nurse\", \"Teacher\").");
+      return;
+    }
+
     if (titleOverride) setJobTitle(titleOverride);
-    setLocalModeLoading(true); setResult(null); setError(null); 
-    
+    setLocalModeLoading(true); setResult(null); setError(null);
+
+    // Mark as actively generating so cleanup doesn't terminate the worker
+    if (worker.current) worker.current._isGenerating = true;
+
+    // 90-second timeout: browser may throttle WebGPU in background tabs
+    if (worker.current) {
+      worker.current._genTimeout = setTimeout(() => {
+        setError(`⏱️ Local generation timed out after 90s.  Tip: Keep this tab in the foreground — Chrome throttles WebGPU in background tabs. Alternatively, use Cloud mode.`);
+        setLocalModeLoading(false);
+        if (worker.current) worker.current._isGenerating = false;
+      }, 90_000);
+    }
+
     if (!isLocalReady) {
       setLocalProgress({ status: 'initiating', progress: 0 });
       worker.current.postMessage({ type: "init", modelId: localModelVersion });
