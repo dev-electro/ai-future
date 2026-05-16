@@ -1434,7 +1434,7 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     }
   }, [lang]);
 
-  const doAnalyzeCloud = useCallback(async (titleOverride) => {
+  const doAnalyzeCloud = useCallback(async (titleOverride, _isRetry = false) => {
     const title = titleOverride || jobTitle;
     if (!title.trim()) return;
     if (titleOverride) setJobTitle(titleOverride);
@@ -1444,16 +1444,27 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle: title.trim(), workDesc: titleOverride ? "" : workDesc.trim(), lang: lang || "en" }),
       });
-      
+
       const textResponse = await res.text();
       let data;
       try {
         data = JSON.parse(textResponse);
       } catch (e) {
-        throw new Error("Server overloaded or timed out. Please try again.");
+        // HTML 504 / Vercel timeout — auto-retry once silently before showing error
+        if (!_isRetry) {
+          setError(null);
+          return doAnalyzeCloud(titleOverride ?? title, true);
+        }
+        throw new Error("Server overloaded. Please try again in a moment.");
       }
-      
-      if (!res.ok) throw new Error(data.error || t.error_try_again);
+
+      if (!res.ok) {
+        // 429 or 5xx — retry once
+        if (!_isRetry && (res.status === 429 || res.status >= 500)) {
+          return doAnalyzeCloud(titleOverride ?? title, true);
+        }
+        throw new Error(data.error || t.error_try_again);
+      }
       setResult(data);
       setHistory(h => [title, ...h.filter(x => x !== title)].slice(0, 5));
       window.scrollTo({ top: 0, behavior: "smooth" });
