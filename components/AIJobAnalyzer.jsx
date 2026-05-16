@@ -1397,6 +1397,7 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         } else if (type === "init_ready") {
           setIsLocalReady(true);
           setLocalProgress({ status: 'ready', progress: 100 });
+          // If there was a pending query from a direct Run click, execute it
           if (worker.current?.pendingJobTitle) {
             const pendingTitle = worker.current.pendingJobTitle;
             worker.current.pendingJobTitle = null;
@@ -1877,12 +1878,24 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         const shortFile = rawFile.split('/').pop() || '';
 
         if (isReady) return (
-          <div style={{ background: "rgba(48,196,126,0.08)", border: "1px solid rgba(48,196,126,0.25)", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 22 }}>✅</span>
-            <div>
-              <div style={{ fontFamily: "var(--font-pf)", fontSize: 14, fontWeight: 700, color: "#30C47E" }}>{modelName} ready in your browser</div>
-              <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, marginTop: 2 }}>Model cached. Runs fully offline. Your data never leaves your device.</div>
+          <div style={{ background: "rgba(48,196,126,0.08)", border: "1px solid rgba(48,196,126,0.25)", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 22 }}>✅</span>
+              <div>
+                <div style={{ fontFamily: "var(--font-pf)", fontSize: 14, fontWeight: 700, color: "#30C47E" }}>{modelName} ready in your browser</div>
+                <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, marginTop: 2 }}>Model cached. Runs fully offline. Your data never leaves your device.</div>
+              </div>
             </div>
+            <button onClick={handleDeleteModel} style={{
+              background: "rgba(240,75,107,0.1)", border: "1px solid rgba(240,75,107,0.3)", borderRadius: 8,
+              padding: "6px 12px", cursor: "pointer", fontFamily: "var(--font-pf)", fontSize: 12, color: "#F04B6B",
+              transition: "background 0.2s"
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(240,75,107,0.2)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(240,75,107,0.1)"}
+            >
+              🗑️ Delete Model
+            </button>
           </div>
         );
 
@@ -1900,7 +1913,15 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
                   <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, marginTop: 2 }}
                   >Uses Transformers.js + WebGPU • {modelSize} total • Cached permanently after first download</div>
                 </div>
-                <div style={{ fontFamily: "var(--font-jb)", fontSize: 20, fontWeight: 800, color: th.accent, minWidth: 50, textAlign: "right" }}>{pct}%</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={handleStopDownload} style={{
+                    background: th.surface3, border: `1px solid ${th.border}`, borderRadius: 6,
+                    padding: "4px 8px", cursor: "pointer", fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted
+                  }}>
+                    ⏹ Stop
+                  </button>
+                  <div style={{ fontFamily: "var(--font-jb)", fontSize: 20, fontWeight: 800, color: th.accent, minWidth: 50, textAlign: "right" }}>{pct}%</div>
+                </div>
               </div>
 
               {/* Main progress bar */}
