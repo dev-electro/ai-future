@@ -325,17 +325,18 @@ export default async function handler(req, res) {
 
     if (result.error) {
       console.error("[analyze.js] All LLMs failed:", result.error);
-      return res.status(502).json({ error: "Analysis service error. Please try again." });
+      return res.status(502).json({ error: result.error });
     }
 
     parsed = result.data;
     // Do NOT expose provider name or API infrastructure via headers
 
   } catch (err) {
-    if (err.name === "TimeoutError" || err.name === "AbortError")
+    if (err.name === "TimeoutError" || err.name === "AbortError") {
       return res.status(504).json({ error: "Analysis timed out. Please try again." });
+    }
     console.error("LLM chain failed:", err.message);
-    return res.status(502).json({ error: "Could not reach analysis service." });
+    return res.status(502).json({ error: err.message || "Could not reach analysis service." });
   }
 
   // ── Validate schema ───────────────────────────────────────────────────
