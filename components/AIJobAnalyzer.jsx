@@ -1262,6 +1262,44 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
   const [leaderboardMode, setLeaderboardMode] = useState("Highest");
   const [userCountry, setUserCountry] = useState(null);
 
+  // ── localStorage result cache ─────────────────────────────────────────
+  const LS_CACHE_KEY = "aif_result_cache_v1";
+  const LS_HISTORY_KEY = "aif_history_v1";
+  const LS_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  function lsGet(title) {
+    try {
+      const raw = localStorage.getItem(LS_CACHE_KEY);
+      if (!raw) return null;
+      const cache = JSON.parse(raw);
+      const key = title.trim().toLowerCase();
+      const entry = cache[key];
+      if (!entry) return null;
+      if (Date.now() - entry.ts > LS_TTL) { delete cache[key]; localStorage.setItem(LS_CACHE_KEY, JSON.stringify(cache)); return null; }
+      return entry.result;
+    } catch { return null; }
+  }
+
+  function lsSet(title, result) {
+    try {
+      const raw = localStorage.getItem(LS_CACHE_KEY);
+      const cache = raw ? JSON.parse(raw) : {};
+      const key = title.trim().toLowerCase();
+      cache[key] = { result, ts: Date.now() };
+      // Keep max 50 entries (evict oldest)
+      const entries = Object.entries(cache).sort((a, b) => b[1].ts - a[1].ts).slice(0, 50);
+      localStorage.setItem(LS_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+    } catch { /* storage full or unavailable */ }
+  }
+
+  function lsGetHistory() {
+    try { return JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || "[]"); } catch { return []; }
+  }
+
+  function lsSaveHistory(h) {
+    try { localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(h)); } catch { }
+  }
+
   // Local WebGPU State
   const worker = useRef(null);
   const [localProgress, setLocalProgress] = useState(null);
@@ -1273,6 +1311,13 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
   const [webGPUSupported, setWebGPUSupported] = useState(null); // null = checking, true/false
   const [cachedModels, setCachedModels] = useState({}); // { e2b: true/false, e4b: true/false }
   const [recommendedMode, setRecommendedMode] = useState("cloud");
+
+  const [history, setHistory] = useState([]);
+  // Initialize history from localStorage on mount
+  useEffect(() => {
+    setHistory(lsGetHistory());
+  }, []);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1408,8 +1453,8 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     };
     getUserCountry();
   }, []);
-  const [history, setHistory] = useState([]);
   const inputRef = useRef();
+
 
   // Keyboard shortcut: press '/' to focus
   useEffect(() => {
@@ -1426,18 +1471,31 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     } catch { }
   }, [initialJob]);
 
-  // Clear result when language changes so user must re-query to see translation
+  // Clear error when language changes (but keep the result — user can re-run if they want translation)
   useEffect(() => {
-    if (result) {
-      setResult(null);
-      setError(null);
-    }
+    setError(null);
   }, [lang]);
 
-  const doAnalyzeCloud = useCallback(async (titleOverride, _isRetry = false) => {
+  const doAnalyzeCloud = useCallback(async (titleOverride, _isRetry = false, _skipCache = false) => {
     const title = titleOverride || jobTitle;
     if (!title.trim()) return;
     if (titleOverride) setJobTitle(titleOverride);
+
+    // Check localStorage cache first (skip on explicit re-run with workDesc)
+    if (!_skipCache && !workDesc.trim()) {
+      const cached = lsGet(title);
+      if (cached) {
+        setResult(cached);
+        setHistory(h => {
+          const updated = [title, ...h.filter(x => x !== title)].slice(0, 8);
+          lsSaveHistory(updated);
+          return updated;
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
+
     setLoading(true); setResult(null); setError(null);
     try {
       const res = await fetch("/api/analyze", {
@@ -1450,23 +1508,25 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
       try {
         data = JSON.parse(textResponse);
       } catch (e) {
-        // HTML 504 / Vercel timeout — auto-retry once silently before showing error
-        if (!_isRetry) {
-          setError(null);
-          return doAnalyzeCloud(titleOverride ?? title, true);
-        }
+        if (!_isRetry) { setError(null); return doAnalyzeCloud(titleOverride ?? title, true, _skipCache); }
         throw new Error("Server overloaded. Please try again in a moment.");
       }
 
       if (!res.ok) {
-        // 429 or 5xx — retry once
         if (!_isRetry && (res.status === 429 || res.status >= 500)) {
-          return doAnalyzeCloud(titleOverride ?? title, true);
+          return doAnalyzeCloud(titleOverride ?? title, true, _skipCache);
         }
         throw new Error(data.error || t.error_try_again);
       }
+
       setResult(data);
-      setHistory(h => [title, ...h.filter(x => x !== title)].slice(0, 5));
+      // Cache result locally
+      if (!workDesc.trim()) lsSet(title, data);
+      setHistory(h => {
+        const updated = [title, ...h.filter(x => x !== title)].slice(0, 8);
+        lsSaveHistory(updated);
+        return updated;
+      });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setError(e.message);
@@ -1693,19 +1753,47 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         </div>
       </div>
 
-      {/* History */}
+      {/* History — recent searches, restored instantly from localStorage cache */}
       {history.length > 0 && !loading && (
-        <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.1em" }}>RECENT:</span>
-          {history.map(h => (
-            <button key={h} onClick={() => doAnalyzeCloud(h)} style={{
-              background: th.surface, border: `1px solid ${th.border}`, borderRadius: 20,
-              padding: "6px 14px", fontSize: 13, color: th.textMuted, cursor: "pointer", fontFamily: "var(--font-sora)",
-              display: "inline-flex", alignItems: "center", gap: 6
-            }}><Clock size={11} /> {h}</button>
-          ))}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.1em" }}>RECENT CHECKS</span>
+            <span style={{ fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted }}>— click to restore instantly from cache, 🔄 to re-fetch</span>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {history.map(h => {
+              const isCached = !!lsGet(h);
+              return (
+                <div key={h} style={{ display: "inline-flex", alignItems: "center", gap: 0, borderRadius: 20, overflow: "hidden", border: `1px solid ${isCached ? "rgba(48,196,126,0.3)" : th.border}` }}>
+                  <button
+                    onClick={() => doAnalyzeCloud(h)}
+                    style={{
+                      background: isCached ? "rgba(48,196,126,0.07)" : th.surface,
+                      padding: "6px 12px", fontSize: 13, color: isCached ? "#30C47E" : th.textMuted,
+                      cursor: "pointer", fontFamily: "var(--font-sora)", border: "none",
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                    }}
+                  >
+                    {isCached ? <span style={{ fontSize: 10 }}>⚡</span> : <Clock size={11} />}
+                    {h}
+                  </button>
+                  {isCached && (
+                    <button
+                      title="Re-fetch from API"
+                      onClick={() => doAnalyzeCloud(h, false, true)}
+                      style={{
+                        background: "rgba(48,196,126,0.07)", border: "none", borderLeft: "1px solid rgba(48,196,126,0.2)",
+                        padding: "6px 9px", cursor: "pointer", color: th.textMuted, fontSize: 12,
+                      }}
+                    >🔄</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
+
 
       {/* ═══ Local Model Status Panel ═══ */}
       {localModelVersion !== "cloud" && localProgress && (() => {
