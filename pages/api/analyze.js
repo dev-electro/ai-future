@@ -304,7 +304,8 @@ export default async function handler(req, res) {
   let parsed;
   try {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 60_000);
+    // Use 9s timeout to prevent Vercel's 10s Hobby limit from throwing a 504 HTML page
+    const id = setTimeout(() => controller.abort(), 9_000);
 
     let finalSystemPrompt = SYSTEM_PROMPT;
     const country = (req.headers["x-vercel-ip-country"] || req.headers["cf-ipcountry"] || req.headers["x-client-geo-location"] || "US").toUpperCase();
