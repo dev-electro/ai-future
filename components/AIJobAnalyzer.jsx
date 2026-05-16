@@ -1429,7 +1429,15 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle: title.trim(), workDesc: titleOverride ? "" : workDesc.trim(), lang: lang || "en" }),
       });
-      const data = await res.json();
+      
+      const textResponse = await res.text();
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch (e) {
+        throw new Error("Server overloaded or timed out. Please try again.");
+      }
+      
       if (!res.ok) throw new Error(data.error || t.error_try_again);
       setResult(data);
       setHistory(h => [title, ...h.filter(x => x !== title)].slice(0, 5));
@@ -1649,16 +1657,21 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
       )}
 
       {/* Local model progress visualizer */}
-      {localProgress && localProgress.status === "downloading" && (
+      {localProgress && (localProgress.status === "progress" || localProgress.status === "downloading" || localProgress.status === "initiate" || localProgress.status === "ready") && (
         <div style={{ background: th.surface2, borderRadius: 12, padding: "16px", marginBottom: 20, border: `1px solid ${th.border}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary }}>Downloading Gemma 4 {localModelVersion.toUpperCase()} (WebGPU)...</span>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start" }}>
+            <span style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary }}>
+              Downloading {localModelVersion === "e2b" ? "Gemma 4 E2B" : "Gemma 4 E4B"} weights...
+              <div style={{ fontFamily: "var(--font-jb)", fontSize: 10, color: th.textMuted, marginTop: 4, letterSpacing: "-0.3px", wordBreak: "break-all" }}>
+                {localProgress.file ? `Fetching: ${localProgress.file}` : "Initializing pipeline..."}
+              </div>
+            </span>
             <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.accent }}>{Math.round(localProgress.progress || 0)}%</span>
           </div>
           <div style={{ height: 6, background: th.surface3, borderRadius: 3, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${localProgress.progress || 0}%`, background: th.accent, transition: "width 0.2s" }} />
           </div>
-          <div style={{ marginTop: 8, fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted }}>~1GB model, works offline after first load. Your data stays on your device.</div>
+          <div style={{ marginTop: 12, fontFamily: "var(--font-sora)", fontSize: 11, color: th.textMuted }}>~1.5-3GB model. Works offline after first load. Your data stays on your device.</div>
         </div>
       )}
 
