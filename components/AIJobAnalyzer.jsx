@@ -1366,7 +1366,8 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
 
   useEffect(() => {
     if (!worker.current && typeof window !== "undefined") {
-      worker.current = new Worker(new URL("../lib/worker.js", import.meta.url), { type: "module" });
+      // Added ?v=2 to bust browser cache so the updated worker (with correct model classes) runs
+      worker.current = new Worker(new URL("../lib/worker.js?v=2", import.meta.url), { type: "module" });
 
       // ─ keepalive: ping the worker every 10s so Chrome doesn't suspend
       // it when the tab loses focus (WebGPU gets throttled in background tabs)
