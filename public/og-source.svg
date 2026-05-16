@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EDC875" />
+      <stop offset="50%" stop-color="#C49A4A" />
+      <stop offset="100%" stop-color="#A67B27" />
+    </linearGradient>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F14" />
+      <stop offset="100%" stop-color="#161C24" />
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+    </pattern>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <g opacity="0.1" fill="none" stroke="#EDC875" stroke-width="2">
+    <circle cx="1000" cy="150" r="80"/>
+    <circle cx="1000" cy="150" r="120" stroke-dasharray="10 10"/>
+    <path d="M 1000 30 L 1000 270 M 880 150 L 1120 150"/>
+  </g>
+  
+  <g transform="translate(100, 165)">
+    <path d="M150 0 L0 300 L70 300 L150 140 L230 300 L300 300 Z" fill="url(#gold)" filter="url(#glow)"/>
+    <path d="M70 140 L280 140 L280 190 L45 190 Z" fill="#ffffff" opacity="0.95"/>
+    <path d="M45 190 L240 190 L240 230 L25 230 Z" fill="#ffffff" opacity="0.6"/>
+    
+    <circle cx="150" cy="0" r="15" fill="#ffffff"/>
+    <circle cx="0" cy="300" r="10" fill="#ffffff"/>
+    <circle cx="300" cy="300" r="10" fill="#ffffff"/>
+  </g>
+  
+  <text x="480" y="270" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="96" fill="#ffffff" letter-spacing="-2">AI Future</text>
+  <text x="485" y="340" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="32" fill="#A5B0BA" letter-spacing="1">RESEARCH-BACKED JOB RISK SCORES</text>
+  
+  <line x1="485" y1="410" x2="1100" y2="410" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+  <text x="485" y="470" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="24" fill="#EDC875">Powered by Anthropic 2026 Labor Market Research</text>
+</svg>

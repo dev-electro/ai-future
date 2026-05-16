@@ -1,0 +1,38 @@
+{
+  "name": "AI Future — Will AI Replace Your Job?",
+  "short_name": "AI Future",
+  "description": "Research-backed AI job displacement risk scores for 800+ occupations. Based on Anthropic's 2026 labor market study.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "orientation": "any",
+  "categories": [
+    "utilities",
+    "productivity",
+    "education"
+  ],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "AI Future — research-backed AI job risk scores"
+    }
+  ]
+}
