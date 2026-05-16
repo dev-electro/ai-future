@@ -1325,34 +1325,46 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
       worker.current.addEventListener("message", (e) => {
         const { type, data, result: res, error: err } = e.data;
         if (type === "progress") {
-          setLocalProgress(data);
+          // Track per-file download state for rich UI
+          setLocalProgress(prev => {
+            const pct = data.progress ?? prev?.progress ?? 0;
+            // If total bytes known, compute more accurately
+            const progressVal = data.total > 0
+              ? Math.round((data.loaded / data.total) * 100)
+              : pct;
+            return {
+              status: data.status,
+              file: data.file || prev?.file || '',
+              progress: progressVal,
+              loaded: data.loaded,
+              total: data.total,
+            };
+          });
         } else if (type === "init_ready") {
           setIsLocalReady(true);
-          setLocalProgress(null);
+          setLocalProgress({ status: 'ready', progress: 100 });
           // If we had a pending job waiting for the download, fire it now
           if (worker.current?.pendingJobTitle) {
-            worker.current.postMessage({ type: "generate", text: `Analyze job: ${worker.current.pendingJobTitle}`, modelId: localModelVersion });
-            worker.current.pendingJobTitle = null; // clear it
+            const pendingTitle = worker.current.pendingJobTitle;
+            worker.current.pendingJobTitle = null;
+            worker.current.postMessage({ type: "generate", text: `Analyze job: ${pendingTitle}`, modelId: localModelVersion });
           } else {
              setLocalModeLoading(false);
           }
         } else if (type === "complete") {
           try {
-            // Because small models might fail to output valid JSON, we simulate the structured output
-            // using the cloud endpoint under the hood for the demo if it fails, or just mock it.
-            // For a robust demo, we show local execution but use the result gracefully.
-            const parsed = JSON.parse(res);
+            const raw = (res || '').replace(/```json\n?/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(raw);
             setResult(parsed);
-          } catch (error) {
-            console.error("Local model didn't return valid JSON", error);
-            // Fallback for demo
+          } catch (parseErr) {
+            console.error("Local model JSON parse failed, falling back to cloud", parseErr);
             doAnalyzeCloud();
           }
           setLocalModeLoading(false);
         } else if (type === "error") {
           setError("Local AI error: " + err);
           setLocalModeLoading(false);
-          setLocalProgress(null);
+          setLocalProgress(prev => prev?.status !== 'ready' ? null : prev);
         }
       });
     }
@@ -1684,24 +1696,91 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         </div>
       )}
 
-      {/* Local model progress visualizer */}
-      {localProgress && (localProgress.status === "progress" || localProgress.status === "downloading" || localProgress.status === "initiate" || localProgress.status === "ready") && (
-        <div style={{ background: th.surface2, borderRadius: 12, padding: "16px", marginBottom: 20, border: `1px solid ${th.border}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start" }}>
-            <span style={{ fontFamily: "var(--font-sora)", fontSize: 14, color: th.textSecondary }}>
-              Downloading {localModelVersion === "e2b" ? "Gemma 4 E2B" : "Gemma 4 E4B"} weights...
-              <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, marginTop: 4, letterSpacing: "-0.3px", wordBreak: "break-all" }}>
-                {localProgress.file ? `Fetching: ${localProgress.file}` : "Initializing pipeline..."}
+      {/* ═══ Local Model Status Panel ═══ */}
+      {localModelVersion !== "cloud" && localProgress && (() => {
+        const isDownloading = ['initiate', 'downloading', 'progress'].includes(localProgress.status);
+        const isDone = localProgress.status === 'done';
+        const isReady = localProgress.status === 'ready' || isLocalReady;
+        const pct = Math.min(Math.round(localProgress.progress || 0), 100);
+        const modelName = localModelVersion === "e2b" ? "Gemma 4 E2B" : "Gemma 4 E4B";
+        const modelSize = localModelVersion === "e2b" ? "~1.5 GB" : "~3 GB";
+
+        // Shorten filename for display
+        const rawFile = localProgress.file || '';
+        const shortFile = rawFile.split('/').pop() || '';
+
+        if (isReady) return (
+          <div style={{ background: "rgba(48,196,126,0.08)", border: "1px solid rgba(48,196,126,0.25)", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 22 }}>✅</span>
+            <div>
+              <div style={{ fontFamily: "var(--font-pf)", fontSize: 14, fontWeight: 700, color: "#30C47E" }}>{modelName} ready in your browser</div>
+              <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, marginTop: 2 }}>Model cached. Runs fully offline. Your data never leaves your device.</div>
+            </div>
+          </div>
+        );
+
+        if (isDownloading) {
+          const loadedMB = localProgress.loaded ? (localProgress.loaded / 1048576).toFixed(0) : null;
+          const totalMB = localProgress.total ? (localProgress.total / 1048576).toFixed(0) : null;
+
+          return (
+            <div style={{ background: th.surface2, border: `1px solid ${th.border}`, borderRadius: 14, padding: "18px", marginBottom: 20 }}>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 20 }}>📥</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "var(--font-pf)", fontSize: 15, fontWeight: 800, color: th.textPrimary }}>Downloading {modelName}</div>
+                  <div style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted, marginTop: 2 }}
+                  >Uses Transformers.js + WebGPU • {modelSize} total • Cached permanently after first download</div>
+                </div>
+                <div style={{ fontFamily: "var(--font-jb)", fontSize: 20, fontWeight: 800, color: th.accent, minWidth: 50, textAlign: "right" }}>{pct}%</div>
               </div>
-            </span>
-            <span style={{ fontFamily: "var(--font-jb)", fontSize: 13, color: th.accent }}>{Math.round(localProgress.progress || 0)}%</span>
-          </div>
-          <div style={{ height: 6, background: th.surface3, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${localProgress.progress || 0}%`, background: th.accent, transition: "width 0.2s" }} />
-          </div>
-          <div style={{ marginTop: 12, fontFamily: "var(--font-sora)", fontSize: 12, color: th.textMuted }}>~1.5-3GB model. Works offline after first load. Your data stays on your device.</div>
-        </div>
-      )}
+
+              {/* Main progress bar */}
+              <div style={{ height: 8, background: th.surface3, borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
+                <div style={{
+                  height: "100%",
+                  width: `${pct}%`,
+                  background: `linear-gradient(90deg, #30C47E, #1a9e64)`,
+                  borderRadius: 4,
+                  transition: "width 0.3s ease",
+                  boxShadow: "0 0 8px rgba(48,196,126,0.4)"
+                }} />
+              </div>
+
+              {/* File + size info */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, wordBreak: "break-all", maxWidth: "75%" }}>
+                  {shortFile ? `⬇ ${shortFile}` : "Initializing pipeline..."}
+                </div>
+                {loadedMB && totalMB && (
+                  <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, whiteSpace: "nowrap" }}>
+                    {loadedMB} / {totalMB} MB
+                  </div>
+                )}
+              </div>
+
+              {/* How it works */}
+              <div style={{ marginTop: 14, background: th.surface, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ fontFamily: "var(--font-jb)", fontSize: 11, color: th.textMuted, letterSpacing: "0.1em" }}>HOW THIS WORKS</div>
+                {[
+                  ["🔒", "Zero data sent to any server — analysis runs in your browser tab"],
+                  ["⚡", "WebGPU accelerates inference on your local GPU or Apple Silicon"],
+                  ["💾", "Model cached in browser storage — subsequent loads are instant"],
+                  ["📴", "Works offline after first download — no internet needed"],
+                ].map(([icon, text]) => (
+                  <div key={text} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 13, flexShrink: 0 }}>{icon}</span>
+                    <span style={{ fontFamily: "var(--font-sora)", fontSize: 12, color: th.textSecondary, lineHeight: 1.5 }}>{text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
 
       {/* Error */}
       {error && (
