@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Force webpack — Turbopack doesn't support WebGPU/Transformers.js yet
+  turbopack: false,
   // Security headers applied to every response
   async headers() {
     return [
