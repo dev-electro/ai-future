@@ -14,8 +14,9 @@ export default async function handler(req) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
 
   const PROVIDERS = [
-    { id: 'Gemini:gemma-4-26b-a4b-it', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemma-4-26b-a4b-it', key: geminiKey },
-    { id: 'OpenRouter:gemma-4-26b-a4b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', model: 'google/gemma-4-26b-a4b-it:free', key: openrouterKey },
+    { id: 'Gemini:gemma-4-31b-it', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemma-4-31b-it', key: geminiKey, timeout: 20000 },
+    { id: 'OpenRouter:gemma-4-31b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', model: 'google/gemma-4-31b-it:free', key: openrouterKey, timeout: 8000 },
+    { id: 'OpenRouter:gemma-4-26b-a4b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', model: 'google/gemma-4-26b-a4b-it:free', key: openrouterKey, timeout: 8000 },
   ];
 
   const PING_BODY = {
@@ -40,7 +41,7 @@ export default async function handler(req) {
           'HTTP-Referer': 'https://ai-future-eta.vercel.app',
         },
         body: JSON.stringify({ model: p.model, ...PING_BODY }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(p.timeout),
       });
       const ms = Date.now() - t0;
       if (!res.ok) {
