@@ -1266,189 +1266,41 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
     startDownload, stopDownload, deleteModel, runInference,
   } = useLocalModel();
 
+  // ── Worker action delegates (hook owns the worker) ──────────────────────
+  const doDownloadModel    = () => startDownload(localModelVersion);
+  const handleStopDownload = stopDownload;
+  const handleDeleteModel  = deleteModel;
+  const handlePreDownload  = (modelId) => startDownload(modelId);
 
+  const doAnalyzeLocal = useCallback(async (titleOverride) => {
+    const title = titleOverride || jobTitle;
+    if (!title.trim()) return;
+    const offTopicPatterns = /^(what|how|why|when|where|who|is |are |can |could |should |would |do |does |did |tell me|explain|help me|write|create|generate|make|build|concubin|sex|drug|hack|crack|spam)/i;
+    if (title.trim().length < 3 || offTopicPatterns.test(title.trim())) {
+      setError("🚫 Please enter a real job title (e.g. \"Software Engineer\", \"Nurse\", \"Teacher\").");
+      return;
+    }
+    if (titleOverride) setJobTitle(titleOverride);
+    setResult(null); setError(null);
+    runInference(title, localModelVersion, {
+      onComplete: (res) => {
+        if (res === "OFF_TOPIC") { setError("🚫 Please enter a real job title for analysis."); return; }
+        try {
+          const parsed = JSON.parse((res || "").replace(/```json\n?/g, "").replace(/```/g, "").trim());
+          if (parsed.error === "off_topic") setError("🚫 Please enter a real job title for analysis.");
+          else setResult(parsed);
+        } catch { setError("Local model output wasn't valid JSON. Try Cloud mode."); }
+      },
+      onError:   (err) => setError("Local AI error: " + err),
+      onTimeout: ()    => setError("⏱️ Local generation timed out after 90s. Keep this tab in the foreground — Chrome throttles WebGPU in background tabs."),
+    });
+  }, [jobTitle, localModelVersion, runInference]);
 
   const [history, setHistory] = useState([]);
   // Initialize history from localStorage on mount
   useEffect(() => {
     setHistory(lsGetHistory());
   }, []);
-
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    (async () => {
-      // 1. WebGPU Detection
-      const hasWebGPU = !!(navigator.gpu);
-      let gpuAdapterOk = false;
-      if (hasWebGPU) {
-        try {
-          const adapter = await navigator.gpu.requestAdapter();
-          gpuAdapterOk = !!adapter;
-        } catch { gpuAdapterOk = false; }
-      }
-      setWebGPUSupported(gpuAdapterOk);
-
-      // 2. Cache detection — HuggingFace Transformers.js uses Cache Storage
-      const cacheStatus = { e2b: false, e4b: false };
-      try {
-        if ("caches" in window) {
-          const cacheKeys = await caches.keys();
-          const hfCache = cacheKeys.find(k => k.includes("transformers") || k.includes("huggingface"));
-          if (hfCache) {
-            const cache = await caches.open(hfCache);
-            const requests = await cache.keys();
-            const urls = requests.map(r => r.url);
-            cacheStatus.e2b = urls.some(u => u.includes("gemma-4-E2B-it-ONNX"));
-            cacheStatus.e4b = urls.some(u => u.includes("gemma-4-E4B-it-ONNX"));
-          }
-        }
-      } catch { /* cache API unavailable */ }
-      setCachedModels(cacheStatus);
-
-      // 3. Recommended mode based on device capabilities
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-      let recommended = "cloud";
-      if (gpuAdapterOk) {
-        recommended = isMobile ? "e2b" : "e4b"; // mobile → smaller model
-        if (cacheStatus.e4b) recommended = "e4b"; // prefer already-cached
-        if (cacheStatus.e2b && !cacheStatus.e4b) recommended = "e2b";
-      }
-      setRecommendedMode(recommended);
-      // ALWAYS default to cloud mode for reliability, let user explicitly choose local
-      setLocalModelVersion("cloud");
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!worker.current && typeof window !== "undefined") {
-      // Hard renamed to ai-worker.js to permanently bust Webpack/browser cache
-      worker.current = new Worker(new URL("../lib/ai-worker.js?v=3", import.meta.url), { type: "module" });
-
-      // ─ keepalive: ping the worker every 10s so Chrome doesn't suspend
-      // it when the tab loses focus (WebGPU gets throttled in background tabs)
-      const keepaliveInterval = setInterval(() => {
-        if (worker.current) worker.current.postMessage({ type: "keepalive" });
-      }, 10_000);
-
-      // ─ visibility change: log a warning if the tab goes to background during inference
-      const onVisChange = () => {
-        if (document.visibilityState === "hidden") {
-          console.warn("[Worker] Tab hidden — WebGPU inference may be throttled by the browser.");
-        }
-      };
-      document.addEventListener("visibilitychange", onVisChange);
-
-      worker.current.addEventListener("message", (e) => {
-        const { type, data, result: res, error: err } = e.data;
-        if (type === "keepalive") return; // pong — ignore
-
-        if (type === "progress") {
-          setLocalProgress(prev => {
-            const progressVal = data.total > 0
-              ? Math.round((data.loaded / data.total) * 100)
-              : (data.progress ?? prev?.progress ?? 0);
-            return { status: data.status, file: data.file || prev?.file || '', progress: progressVal, loaded: data.loaded, total: data.total };
-          });
-        } else if (type === "init_ready") {
-          setIsLocalReady(true);
-          setLocalProgress({ status: 'ready', progress: 100 });
-          // If there was a pending query from a direct Run click, execute it
-          if (worker.current?.pendingJobTitle) {
-            const pendingTitle = worker.current.pendingJobTitle;
-            worker.current.pendingJobTitle = null;
-            worker.current.postMessage({ type: "generate", text: `Analyze job: ${pendingTitle}`, modelId: localModelVersion });
-          } else {
-            setLocalModeLoading(false);
-          }
-        } else if (type === "complete") {
-          // Clear the generation timeout
-          if (worker.current?._genTimeout) { clearTimeout(worker.current._genTimeout); worker.current._genTimeout = null; }
-
-          if (res === "OFF_TOPIC") {
-            setError("🚫 Please enter a real job title for analysis.");
-            setLocalModeLoading(false);
-            return;
-          }
-          try {
-            const raw = (res || '').replace(/```json\n?/g, '').replace(/```/g, '').trim();
-            const parsed = JSON.parse(raw);
-            if (parsed.error === "off_topic") {
-              setError("🚫 Please enter a real job title for analysis.");
-            } else {
-              setResult(parsed);
-            }
-          } catch (parseErr) {
-            console.error("Local model JSON parse failed", parseErr);
-            setError("Local model output wasn't valid JSON. Try Cloud mode for better reliability.");
-          }
-          setLocalModeLoading(false);
-        } else if (type === "error") {
-          if (worker.current?._genTimeout) { clearTimeout(worker.current._genTimeout); worker.current._genTimeout = null; }
-          setError("Local AI error: " + err);
-          setLocalModeLoading(false);
-          setLocalProgress(prev => prev?.status !== 'ready' ? null : prev);
-        }
-      });
-
-      worker.current._keepalive = keepaliveInterval;
-      worker.current._onVisChange = onVisChange;
-    }
-    return () => {
-      if (worker.current) {
-        clearInterval(worker.current._keepalive);
-        document.removeEventListener("visibilitychange", worker.current._onVisChange);
-        // Don't terminate if actively generating — let it finish
-        if (!worker.current._isGenerating) {
-          worker.current.terminate();
-          worker.current = null;
-        }
-      }
-    };
-  }, []);
-
-  const doDownloadModel = useCallback(() => {
-    if (isLocalReady || localProgress?.status === 'downloading') return;
-    setLocalProgress({ status: 'initiating', progress: 0 });
-    worker.current.postMessage({ type: "init", modelId: localModelVersion });
-  }, [isLocalReady, localProgress, localModelVersion]);
-
-  const doAnalyzeLocal = useCallback(async (titleOverride) => {
-    const title = titleOverride || jobTitle;
-    if (!title.trim()) return;
-
-    // Client-side off-topic guard — same spirit as the server-side validator
-    // Prevents wasting 30-90s of local WebGPU compute on clearly non-job inputs
-    const offTopicPatterns = /^(what|how|why|when|where|who|is |are |can |could |should |would |do |does |did |tell me|explain|help me|write|create|generate|make|build|concubin|sex|drug|hack|crack|spam)/i;
-    const tooShort = title.trim().length < 3;
-    if (tooShort || offTopicPatterns.test(title.trim())) {
-      setError("🚫 Please enter a real job title (e.g. \"Software Engineer\", \"Nurse\", \"Teacher\").");
-      return;
-    }
-
-    if (titleOverride) setJobTitle(titleOverride);
-    setLocalModeLoading(true); setResult(null); setError(null);
-
-    // Mark as actively generating so cleanup doesn't terminate the worker
-    if (worker.current) worker.current._isGenerating = true;
-
-    // 90-second timeout: browser may throttle WebGPU in background tabs
-    if (worker.current) {
-      worker.current._genTimeout = setTimeout(() => {
-        setError(`⏱️ Local generation timed out after 90s.  Tip: Keep this tab in the foreground — Chrome throttles WebGPU in background tabs. Alternatively, use Cloud mode.`);
-        setLocalModeLoading(false);
-        if (worker.current) worker.current._isGenerating = false;
-      }, 90_000);
-    }
-
-    if (!isLocalReady) {
-      setLocalProgress({ status: 'initiating', progress: 0 });
-      worker.current.postMessage({ type: "init", modelId: localModelVersion });
-      worker.current.pendingJobTitle = title;
-    } else {
-      worker.current.postMessage({ type: "generate", text: `Analyze job: ${title}`, modelId: localModelVersion });
-    }
-  }, [jobTitle, isLocalReady, localModelVersion]);
 
   // Initialize region client-side
   useEffect(() => {
@@ -1463,44 +1315,6 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
       }
     };
     getUserCountry();
-  }, []);
-  // ── Local model management handlers ──────────────────────────────────────────
-  const handleStopDownload = useCallback(() => {
-    if (worker.current) {
-      worker.current.terminate();
-      worker.current = null;
-    }
-    setLocalProgress(null);
-    setLocalModeLoading(false);
-    setIsLocalReady(false);
-  }, []);
-
-  const handleDeleteModel = useCallback(async () => {
-    if (worker.current) { worker.current.terminate(); worker.current = null; }
-    try {
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        for (const k of keys) {
-          if (k.includes("transformers") || k.includes("huggingface") || k.includes("onnx")) {
-            await caches.delete(k);
-          }
-        }
-      }
-      // Also clear IndexedDB if transformers.js used it
-      if ("indexedDB" in window) {
-        indexedDB.deleteDatabase("transformers-cache");
-      }
-    } catch (e) { console.error("Cache clear failed", e); }
-    setCachedModels({ e2b: false, e4b: false });
-    setIsLocalReady(false);
-    setLocalProgress(null);
-    setLocalModeLoading(false);
-  }, []);
-
-  const handlePreDownload = useCallback((modelId) => {
-    if (!worker.current) return;
-    setLocalProgress({ status: 'initiating', progress: 0 });
-    worker.current.postMessage({ type: "init", modelId });
   }, []);
 
   const inputRef = useRef();
