@@ -100,6 +100,14 @@ export function useLocalModel() {
           if (worker.current?.pendingJobTitle) {
             const t = worker.current.pendingJobTitle;
             worker.current.pendingJobTitle = null;
+            
+            // 90s hard timeout starts NOW since download is done
+            worker.current._genTimeout = setTimeout(() => {
+              worker.current._onTimeout?.();
+              setLocalModeLoading(false);
+              worker.current._isGenerating = false;
+            }, 90_000);
+
             worker.current.postMessage({ type: "generate", text: `Analyze job: ${t}`, modelId: worker.current._modelId });
           } else {
             setLocalModeLoading(false);
@@ -177,19 +185,19 @@ export function useLocalModel() {
     worker.current._modelId      = modelId;
     worker.current._onComplete   = onComplete;
     worker.current._onError      = onError;
-
-    // 90s hard timeout — Chrome throttles WebGPU in background tabs
-    worker.current._genTimeout = setTimeout(() => {
-      onTimeout?.();
-      setLocalModeLoading(false);
-      if (worker.current) worker.current._isGenerating = false;
-    }, 90_000);
+    worker.current._onTimeout    = onTimeout; // Save so we can trigger it after init
 
     if (!isLocalReady) {
       setLocalProgress({ status: "initiating", progress: 0 });
       worker.current.postMessage({ type: "init", modelId });
       worker.current.pendingJobTitle = title;
     } else {
+      // 90s hard timeout — Chrome throttles WebGPU in background tabs
+      worker.current._genTimeout = setTimeout(() => {
+        onTimeout?.();
+        setLocalModeLoading(false);
+        if (worker.current) worker.current._isGenerating = false;
+      }, 90_000);
       worker.current.postMessage({ type: "generate", text: `Analyze job: ${title}`, modelId });
     }
   }, [isLocalReady]);
