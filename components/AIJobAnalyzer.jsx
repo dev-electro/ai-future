@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Shield, Zap, AlertTriangle, Eye, Check, Sun, Moon, ArrowRightLeft, Rocket, Clock, DownloadCloud, Search, RefreshCw, Share2, BookOpen, TrendingDown } from "lucide-react";
+import { Shield, Zap, AlertTriangle, Eye, Check, Sun, Moon, ArrowRightLeft, Rocket, Clock, DownloadCloud, Search, RefreshCw, Share2, BookOpen, TrendingDown, Laptop, Monitor, BarChart2, Scale, Hospital, Palette, Stethoscope, TrendingUp, Trophy, Medal, Award, Coins, Network, Radio, Compass, Target, Key, Globe, Calculator, Building2, Megaphone, Newspaper, Users, Home, Landmark, School, Pill, Brain, ShieldAlert, PawPrint, Bone, ChefHat, Wrench, Flame, Beer, LifeBuoy, Bike, Wheat, HeartHandshake, Phone, PenTool, Receipt, FileText, Keyboard, Headphones } from "lucide-react";
 import { LANG_META, SUPPORTED_LANGS, useT } from "@/lib/i18n";
 import DocSetCTA from "./DocSetCTA";
 import { LB_DATA, QUICK_PICKS, THEMES, LEVELS, BLS_C, URGENCY, lsGet, lsSet, lsGetHistory, lsSaveHistory } from "@/lib/analyzerConstants";
@@ -226,6 +226,96 @@ function SkeletonResult({ th }) {
         </div>
       </div>
       {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 80, marginBottom: 10 }} />)}
+    </div>
+  );
+}
+
+/* ─── Trivia Loader ────────────────────────────────────────────────────── */
+const TRIVIA = [
+  { stat: "92%",  label: "Computer Programmers",     fact: "The most AI-exposed job in the US. LLMs can handle 92% of programming tasks in controlled studies." },
+  { stat: "47%",  label: "Higher Pay, Higher Risk",   fact: "Top-exposed workers earn 47% MORE than the average — AI is hitting high-skill white-collar roles first." },
+  { stat: "14%",  label: "Early-Career Drop",         fact: "Hiring for AI-exposed entry-level roles (ages 22–25) fell 14% post-ChatGPT. Junior roles hit hardest." },
+  { stat: "0%",   label: "No Mass Unemployment",      fact: "Despite predictions, there's been NO statistically significant unemployment increase post-ChatGPT (Anthropic 2026)." },
+  { stat: "3.9×", label: "Grad-Degree Concentration", fact: "Grad-degree workers are 3.9× more likely to work in high-exposure occupations than those without a degree." },
+  { stat: "+45%", label: "Nurse Practitioners",       fact: "While AI automates admin tasks, Nurse Practitioners grow 45% by 2034. Human touch is the moat." },
+  { stat: "-14%", label: "Telemarketers",             fact: "The fastest-shrinking role — down 14% by 2034. 85% of telemarketing tasks are LLM-feasible." },
+  { stat: "10pp", label: "BLS Growth Impact",         fact: "Every 10 percentage points of AI exposure correlates with 0.6pp lower BLS job growth over 10 years." },
+  { stat: "+33%", label: "Cybersecurity Analysts",    fact: "The more AI writes code, the more bugs and attack surfaces — Cybersecurity analysts grow 33% by 2034." },
+  { stat: "6%",   label: "Electricians",              fact: "Only 6% AI exposure. Physical dexterity + licensed trades = near-zero automation risk." },
+  { stat: "800+", label: "O*NET Occupations Studied", fact: "Anthropic's research rated 800+ US occupations for AI exposure using actual Claude usage patterns, not surveys." },
+  { stat: "65%",  label: "Software Engineers",        fact: "Software Engineers are 65% exposed — but also growing 17% by 2034. AI augments them more than replaces." },
+];
+
+function TriviaLoader({ th, jobTitle }) {
+  const [idx, setIdx] = useState(0);
+  const [fade, setFade] = useState(true);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const ticker = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setFade(false);
+      setTimeout(() => { setIdx(i => (i + 1) % TRIVIA.length); setFade(true); }, 350);
+    }, 4000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const item = TRIVIA[idx];
+  const pct  = Math.min((elapsed / 28) * 100, 95); // 28s = Gemini budget
+
+  return (
+    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 20, overflow: "hidden" }}>
+      {/* Top status bar */}
+      <div style={{ padding: "18px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px #10b981", animation: "pulse 1.5s infinite" }} />
+          <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.textMuted, letterSpacing: "0.08em" }}>
+            GEMMA 4 · ANALYZING{jobTitle ? ` "${jobTitle.toUpperCase()}"` : ""}
+          </span>
+        </div>
+        <span style={{ fontFamily: "var(--font-jb)", fontSize: 12, color: th.accent }}>{elapsed}s</span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ margin: "12px 24px 0", height: 3, background: th.surface3, borderRadius: 2, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`,
+          background: `linear-gradient(90deg, ${th.accent}80, ${th.accent})`,
+          borderRadius: 2, transition: "width 1s linear"
+        }} />
+      </div>
+
+      {/* Trivia card */}
+      <div style={{
+        margin: 24, padding: 24,
+        background: th.surface2, border: `1px solid ${th.border}`, borderRadius: 14,
+        opacity: fade ? 1 : 0, transition: "opacity 0.35s ease",
+        minHeight: 110
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
+          <div style={{
+            fontFamily: "var(--font-pf)", fontSize: 38, fontWeight: 900,
+            color: th.accent, lineHeight: 1, flexShrink: 0, minWidth: 80
+          }}>{item.stat}</div>
+          <div>
+            <div style={{ fontFamily: "var(--font-pf)", fontSize: 14, fontWeight: 700, color: th.textPrimary, marginBottom: 6 }}>
+              {item.label}
+            </div>
+            <div style={{ fontFamily: "var(--font-sora)", fontSize: 13, color: th.textSecondary, lineHeight: 1.6 }}>
+              {item.fact}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Skeleton rows below */}
+      <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {[1, 2].map(i => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 10 }} />)}
+      </div>
     </div>
   );
 }
@@ -1881,11 +1971,8 @@ function AnalyzePage({ th, t, initialJob, onToast, lang }) {
         </div>
       )}
 
-      {/* Loading skeleton */}
       {loading && (
-        <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 20 }}>
-          <SkeletonResult th={th} />
-        </div>
+        <TriviaLoader th={th} jobTitle={jobTitle} />
       )}
 
       {/* Result */}
