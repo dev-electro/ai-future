@@ -14,8 +14,8 @@ export default async function handler(req) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
 
   const PROVIDERS = [
-    { id: 'Gemini:gemma-4-26b-a4b-it', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemma-4-26b-a4b-it', key: geminiKey, timeout: 20000 },
     { id: 'OpenRouter:gemma-4-26b-a4b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', model: 'google/gemma-4-26b-a4b-it:free', key: openrouterKey, timeout: 8000 },
+    { id: 'Gemini:gemma-4-26b-a4b-it', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemma-4-26b-a4b-it', key: geminiKey, timeout: 25000 },
   ];
 
   const PING_BODY = {

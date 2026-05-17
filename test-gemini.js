@@ -1,7 +1,7 @@
 const apiKey = process.env.GEMINI_API_KEY;
 const url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const body = {
-  model: "gemma-4-31b-it",
+  model: "gemma-4-26b-a4b-it",
   messages: [{ role: "user", content: "Hello" }]
 };
 fetch(url, {
